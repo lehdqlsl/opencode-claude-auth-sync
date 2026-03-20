@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 
 $claudeCredsPath = if ($env:CLAUDE_CREDENTIALS_PATH) { $env:CLAUDE_CREDENTIALS_PATH } else { Join-Path $HOME ".claude\.credentials.json" }
 $opencodeAuthPath = if ($env:OPENCODE_AUTH_PATH) { $env:OPENCODE_AUTH_PATH } else { Join-Path $HOME ".local\share\opencode\auth.json" }
-$refreshThreshold = 60000 # 60 seconds
+$refreshThreshold = 3600000 # 1 hour
 
 if (-not (Test-Path $opencodeAuthPath)) { exit 0 }
 
