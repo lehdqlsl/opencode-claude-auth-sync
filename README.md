@@ -95,12 +95,13 @@ This tool bridges the gap: it reads your existing Claude CLI OAuth tokens and wr
 
 1. Claude CLI stores OAuth credentials after you run `claude` and authenticate (Keychain on macOS, file on Linux/Windows)
 2. This sync script detects the platform and reads the `claudeAiOauth` object from the appropriate source
-3. It compares the `accessToken` and `refreshToken` with what's currently in OpenCode's `auth.json`
-4. If they differ (or the Anthropic entry doesn't exist), it writes the new credentials
-5. If they're identical, it logs the remaining token lifetime and exits (no unnecessary writes)
-6. Once the credentials are in `auth.json`, OpenCode's built-in `opencode-anthropic-auth` plugin handles everything else: token refresh, request signing, OAuth beta headers, and user-agent
+3. **If the token is expiring within 60 seconds**, it automatically runs `claude` CLI to refresh the token before syncing
+4. It compares the `accessToken`, `refreshToken`, and `expiresAt` with what's currently in OpenCode's `auth.json`
+5. If they differ (or the Anthropic entry doesn't exist), it writes the new credentials
+6. If they're identical, it logs the remaining token lifetime and exits (no unnecessary writes)
+7. Once the credentials are in `auth.json`, OpenCode's built-in `opencode-anthropic-auth` plugin handles everything else: token refresh, request signing, OAuth beta headers, and user-agent
 
-Claude CLI tokens are valid for approximately **5–6 hours**. The sync job runs every hour (LaunchAgent on macOS, cron on Linux, Task Scheduler on Windows), so if you re-authenticate with Claude CLI, OpenCode picks up the new tokens automatically. On macOS, LaunchAgent catches up on missed runs after sleep/wake — no missed syncs even with the lid closed.
+Claude CLI tokens are valid for approximately **5–6 hours**. The sync job runs every hour (LaunchAgent on macOS, cron on Linux, Task Scheduler on Windows) and **automatically refreshes tokens before they expire** — no manual re-authentication needed. On macOS, LaunchAgent catches up on missed runs after sleep/wake.
 
 ## Install (detailed)
 
@@ -212,13 +213,15 @@ The installer warns if detected. Remove it manually from the `plugin` array in y
 
 ### Token expiration / "EXPIRED" status
 
-Claude CLI tokens are valid for approximately **5–6 hours**. If you see `EXPIRED` in the sync output or `Token refresh failed: 429` when using Claude models:
+The sync script automatically refreshes tokens via Claude CLI when they're about to expire. In most cases, you'll never see `EXPIRED`.
 
-1. Re-authenticate with Claude CLI:
+If auto-refresh fails (e.g. `claude` CLI not in PATH, or network issues):
+
+1. Re-authenticate manually:
    ```bash
    claude
    ```
-2. Re-run the sync immediately:
+2. Re-run the sync:
    ```bash
    # Linux / macOS
    ~/.local/bin/sync-claude-to-opencode.sh
@@ -226,30 +229,10 @@ Claude CLI tokens are valid for approximately **5–6 hours**. If you see `EXPIR
    # Windows
    & "$HOME\.local\bin\sync-claude-to-opencode.ps1"
    ```
-3. Verify the output shows remaining time (e.g. `5h 30m remaining`), not `EXPIRED`
-
-The scheduled sync job (LaunchAgent / cron / Task Scheduler) will also pick up new credentials automatically within an hour.
-
-### Logged out of OpenCode / Claude models disappeared
-
-If you ran `opencode auth logout` or the Anthropic entry was removed from `auth.json`, you don't need to log back in through OpenCode's broken OAuth flow. Just re-sync:
-
-```bash
-# Make sure Claude CLI is authenticated
-claude
-
-# Re-sync (if already installed)
-~/.local/bin/sync-claude-to-opencode.sh          # Linux / macOS
-& "$HOME\.local\bin\sync-claude-to-opencode.ps1"  # Windows
-
-# Restart OpenCode — Claude models should reappear
-```
-
-If you haven't installed yet, the one-liner install handles the initial sync automatically.
 
 ### Token refresh failed: 429
 
-This means OpenCode tried to use an expired token. It's not a rate limit — it's Anthropic rejecting a stale refresh token. Fix by re-authenticating with `claude` and syncing again (see above).
+This means OpenCode tried to use an expired token. The sync script's auto-refresh should prevent this, but if it occurs, re-authenticate with `claude` and sync again.
 
 ### Sync log
 
