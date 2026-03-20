@@ -138,6 +138,13 @@ Install opencode-claude-auth-sync from https://github.com/lehdqlsl/opencode-clau
    ~/.local/bin/sync-claude-to-opencode.sh
    # Windows
    & "$HOME\.local\bin\sync-claude-to-opencode.ps1"
+
+6. If the user doesn't want a background scheduler, install with --no-scheduler:
+   # Linux / macOS
+   curl -fsSL https://raw.githubusercontent.com/lehdqlsl/opencode-claude-auth-sync/main/install.sh | bash -s -- --no-scheduler
+   # Windows
+   Download and run install.ps1 with --no-scheduler flag
+   Then sync manually whenever needed.
 ```
 
 ### Linux / macOS (manual)
@@ -149,7 +156,15 @@ curl -fsSL https://raw.githubusercontent.com/lehdqlsl/opencode-claude-auth-sync/
 chmod +x ~/.local/bin/sync-claude-to-opencode.sh
 
 ~/.local/bin/sync-claude-to-opencode.sh
+```
 
+(Optional) Set up automatic hourly syncing:
+
+```bash
+# macOS — LaunchAgent (recommended, catches up after sleep)
+# Use the install script: curl ... | bash
+
+# Linux — cron
 (crontab -l 2>/dev/null; echo "0 * * * * \$HOME/.local/bin/sync-claude-to-opencode.sh >> \$HOME/.local/share/opencode/sync-claude.log 2>&1") | crontab -
 ```
 
