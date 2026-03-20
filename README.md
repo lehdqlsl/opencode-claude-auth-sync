@@ -18,6 +18,22 @@ curl -fsSL https://raw.githubusercontent.com/lehdqlsl/opencode-claude-auth-sync/
 irm https://raw.githubusercontent.com/lehdqlsl/opencode-claude-auth-sync/main/install.ps1 | iex
 ```
 
+**Don't want a scheduler?** Install without automatic syncing:
+
+```bash
+# Linux / macOS
+curl -fsSL https://raw.githubusercontent.com/lehdqlsl/opencode-claude-auth-sync/main/install.sh | bash -s -- --no-scheduler
+
+# Windows (PowerShell)
+& { irm https://raw.githubusercontent.com/lehdqlsl/opencode-claude-auth-sync/main/install.ps1 -OutFile $env:TEMP\install.ps1; & $env:TEMP\install.ps1 --no-scheduler }
+```
+
+Then just run the sync manually whenever you need it:
+```bash
+~/.local/bin/sync-claude-to-opencode.sh          # Linux / macOS
+& "$HOME\.local\bin\sync-claude-to-opencode.ps1"  # Windows
+```
+
 ### Verify
 
 ```bash

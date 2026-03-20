@@ -69,7 +69,16 @@ if [[ -f "$OPENCODE_CONFIG" ]] && grep -q "opencode-claude-auth" "$OPENCODE_CONF
   echo "    This package is incompatible. Please remove it manually from the 'plugin' array."
 fi
 
-if [[ "$(uname)" == "Darwin" ]]; then
+NO_SCHEDULER="${NO_SCHEDULER:-false}"
+if [[ "$1" == "--no-scheduler" ]]; then
+  NO_SCHEDULER=true
+fi
+
+if [[ "$NO_SCHEDULER" == "true" ]]; then
+  echo "==> Skipping scheduler setup (--no-scheduler)."
+  echo "    Run manually when needed: ${INSTALL_DIR}/${SCRIPT_NAME}"
+
+elif [[ "$(uname)" == "Darwin" ]]; then
   echo "==> Setting up LaunchAgent (every hour)..."
   PLIST_DIR="${HOME}/Library/LaunchAgents"
   PLIST_NAME="com.opencode.claude-sync"

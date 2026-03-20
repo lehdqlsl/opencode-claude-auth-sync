@@ -47,18 +47,25 @@ if ((Test-Path $opencodeConfig) -and (Select-String -Path $opencodeConfig -Patte
     Write-Output "    This package is incompatible. Please remove it manually from the 'plugin' array."
 }
 
-Write-Output "==> Setting up Task Scheduler (every hour)..."
-$taskName = "SyncClaudeToOpenCode"
-$existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+$noScheduler = $args -contains "--no-scheduler"
 
-if ($existingTask) {
-    Write-Output "    Task already registered. Skipping."
+if ($noScheduler) {
+    Write-Output "==> Skipping scheduler setup (--no-scheduler)."
+    Write-Output "    Run manually when needed: $installDir\$scriptName"
 } else {
-    $action = New-ScheduledTaskAction -Execute $psExe -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$installDir\$scriptName`""
-    $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Hours 1)
-    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
-    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description "Sync Claude CLI credentials to OpenCode" | Out-Null
-    Write-Output "    Task Scheduler registered."
+    Write-Output "==> Setting up Task Scheduler (every hour)..."
+    $taskName = "SyncClaudeToOpenCode"
+    $existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+
+    if ($existingTask) {
+        Write-Output "    Task already registered. Skipping."
+    } else {
+        $action = New-ScheduledTaskAction -Execute $psExe -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$installDir\$scriptName`""
+        $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Hours 1)
+        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description "Sync Claude CLI credentials to OpenCode" | Out-Null
+        Write-Output "    Task Scheduler registered."
+    }
 }
 
 Write-Output ""
