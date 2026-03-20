@@ -79,7 +79,7 @@ if [[ "$NO_SCHEDULER" == "true" ]]; then
   echo "    Run manually when needed: ${INSTALL_DIR}/${SCRIPT_NAME}"
 
 elif [[ "$(uname)" == "Darwin" ]]; then
-  echo "==> Setting up LaunchAgent (every hour)..."
+  echo "==> Setting up LaunchAgent (every 15 minutes)..."
   PLIST_DIR="${HOME}/Library/LaunchAgents"
   PLIST_NAME="com.opencode.claude-sync"
   PLIST_PATH="${PLIST_DIR}/${PLIST_NAME}.plist"
@@ -99,7 +99,7 @@ elif [[ "$(uname)" == "Darwin" ]]; then
     <string>${INSTALL_DIR}/${SCRIPT_NAME}</string>
   </array>
   <key>StartInterval</key>
-  <integer>3600</integer>
+  <integer>900</integer>
   <key>RunAtLoad</key>
   <true/>
   <key>StandardOutPath</key>
@@ -113,11 +113,11 @@ PLIST
   launchctl unload "$PLIST_PATH" 2>/dev/null || true
   launchctl load "$PLIST_PATH"
   echo "    LaunchAgent registered: $PLIST_NAME"
-  echo "    Runs every hour + on login + catches up after sleep."
+  echo "    Runs every 15 minutes + on login + catches up after sleep."
 
 else
-  echo "==> Setting up cron (every hour)..."
-  CRON_CMD="0 * * * * ${INSTALL_DIR}/${SCRIPT_NAME} >> ${HOME}/.local/share/opencode/sync-claude.log 2>&1 ${CRON_MARKER}"
+  echo "==> Setting up cron (every 15 minutes)..."
+  CRON_CMD="*/15 * * * * ${INSTALL_DIR}/${SCRIPT_NAME} >> ${HOME}/.local/share/opencode/sync-claude.log 2>&1 ${CRON_MARKER}"
 
   if command -v crontab >/dev/null 2>&1; then
     if crontab -l 2>/dev/null | grep -qF "$CRON_MARKER"; then

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 OPENCODE_AUTH="${OPENCODE_AUTH_PATH:-$HOME/.local/share/opencode/auth.json}"
-REFRESH_THRESHOLD=3600000  # 1 hour
+REFRESH_THRESHOLD=900000  # 15 minutes
 
 [[ ! -f "$OPENCODE_AUTH" ]] && exit 0
 command -v node >/dev/null 2>&1 || { echo "node not found" >&2; exit 1; }

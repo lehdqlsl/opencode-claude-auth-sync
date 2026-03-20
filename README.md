@@ -101,7 +101,7 @@ This tool bridges the gap: it reads your existing Claude CLI OAuth tokens and wr
 6. If they're identical, it logs the remaining token lifetime and exits (no unnecessary writes)
 7. Once the credentials are in `auth.json`, OpenCode's built-in `opencode-anthropic-auth` plugin handles everything else: token refresh, request signing, OAuth beta headers, and user-agent
 
-Claude CLI tokens are valid for approximately **5–6 hours**. The sync job runs every hour (LaunchAgent on macOS, cron on Linux, Task Scheduler on Windows) and **automatically refreshes tokens before they expire** — no manual re-authentication needed. On macOS, LaunchAgent catches up on missed runs after sleep/wake.
+Claude CLI tokens are valid for approximately **5–6 hours**. The sync job runs every **15 minutes** (LaunchAgent on macOS, cron on Linux, Task Scheduler on Windows) and **automatically refreshes tokens before they expire** — no manual re-authentication needed. On macOS, LaunchAgent catches up on missed runs after sleep/wake.
 
 ## Install (detailed)
 
@@ -159,14 +159,14 @@ chmod +x ~/.local/bin/sync-claude-to-opencode.sh
 ~/.local/bin/sync-claude-to-opencode.sh
 ```
 
-(Optional) Set up automatic hourly syncing:
+(Optional) Set up automatic syncing (every 15 minutes):
 
 ```bash
 # macOS — LaunchAgent (recommended, catches up after sleep)
 # Use the install script: curl ... | bash
 
 # Linux — cron
-(crontab -l 2>/dev/null; echo "0 * * * * \$HOME/.local/bin/sync-claude-to-opencode.sh >> \$HOME/.local/share/opencode/sync-claude.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "*/15 * * * * \$HOME/.local/bin/sync-claude-to-opencode.sh >> \$HOME/.local/share/opencode/sync-claude.log 2>&1") | crontab -
 ```
 
 ### Windows (manual)
