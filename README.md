@@ -2,9 +2,9 @@
 
 Sync your existing [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) credentials to [OpenCode](https://opencode.ai) — no separate Anthropic login needed.
 
-> **Note:** OpenCode has officially dropped native Anthropic authentication support. This tool is the recommended way to use Claude models with OpenCode if you have a Claude CLI subscription.
+> **Heads up (March 2026):** Anthropic is tightening server-side enforcement — billing header injection, endpoint migration (`platform.claude.com`), and User-Agent checks are being rolled out. Token sync alone may stop working in a future OpenCode release. We're tracking this and plan to ship a self-contained `plugin.mjs` (no npm) in v0.5.0. For now, everything works on OpenCode v1.2.27 and below.
 
-> **Why not an npm plugin?** When auth breaks, npm packages pop up fast — but installing unknown packages that handle your OAuth tokens is a risk. This tool is a plain shell script (~100 lines) you can read in full before running. No `node_modules`, no dependency tree, no trust required.
+> **Why not an npm plugin?** When auth breaks, npm packages pop up fast — but installing unknown packages that handle your OAuth tokens is a risk. This tool is a plain shell script you can read in full before running. No `node_modules`, no dependency tree, no trust required.
 
 ## Quick Start
 
@@ -54,6 +54,89 @@ opencode models anthropic  # Should list Claude models (e.g. claude-opus-4-6)
 
 # Force refresh token via Claude CLI regardless of expiry
 ~/.local/bin/sync-claude-to-opencode.sh --force
+```
+
+## Multi-Account
+
+v0.4.0 adds local multi-account storage for people rotating between 2-3 Claude Max accounts.
+
+Important: Claude CLI itself only supports one logged-in account at a time. Multi-account here means this tool stores multiple credential sets in its own account store, then switches which one is written into OpenCode's `auth.json`.
+
+Account store:
+
+```text
+~/.config/opencode-claude-auth-sync/accounts.json
+```
+
+### Add accounts
+
+Use `--login` — it handles logout, login, and save in one command:
+
+```bash
+~/.local/bin/sync-claude-to-opencode.sh --login personal
+~/.local/bin/sync-claude-to-opencode.sh --login work
+~/.local/bin/sync-claude-to-opencode.sh --login backup
+```
+
+Windows:
+
+```powershell
+& "$HOME\.local\bin\sync-claude-to-opencode.ps1" --login personal
+& "$HOME\.local\bin\sync-claude-to-opencode.ps1" --login work
+```
+
+Each `--login` logs out the current Claude session, opens the login flow, then saves the credentials under the given label.
+
+If you've already logged in via `claude` and just want to capture the current session without re-logging in:
+
+```bash
+~/.local/bin/sync-claude-to-opencode.sh --add personal
+```
+
+### Manage accounts
+
+```bash
+# List stored accounts
+~/.local/bin/sync-claude-to-opencode.sh --list
+
+# Show active account status
+~/.local/bin/sync-claude-to-opencode.sh --status
+
+# Switch active account immediately
+~/.local/bin/sync-claude-to-opencode.sh --switch work
+
+# Rotate to the next account (round-robin)
+~/.local/bin/sync-claude-to-opencode.sh --rotate
+
+# Remove a stored account
+~/.local/bin/sync-claude-to-opencode.sh --remove backup
+```
+
+### Rotation behavior
+
+- OpenCode still uses a single Anthropic entry in `auth.json`
+- This tool switches which stored account is written into that slot
+- If the active account is expired, the script first tries another non-expired stored account
+- If all stored accounts are expired, it falls back to Claude CLI refresh for the currently logged-in Claude account
+- 429 rate limits are not auto-detected in v0.4.0; if one account is rate-limited, run `--rotate` manually
+
+### Store format
+
+```json
+{
+  "accounts": {
+    "personal": {
+      "accessToken": "...",
+      "refreshToken": "...",
+      "expiresAt": 1774027458398,
+      "subscriptionType": "max",
+      "rateLimitTier": "default_claude_max_20x",
+      "addedAt": "2026-03-20T09:55:32.366Z"
+    }
+  },
+  "active": "personal",
+  "rotationIndex": 0
+}
 ```
 
 ## Platform Support
