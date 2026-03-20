@@ -30,7 +30,7 @@ opencode models anthropic  # Should list Claude models (e.g. claude-opus-4-6)
 | Platform | Claude credentials | Scheduler | Install command |
 |---|---|---|---|
 | **Linux / WSL** | `~/.claude/.credentials.json` | cron | `curl \| bash` |
-| **macOS** | macOS Keychain → file fallback | cron | `curl \| bash` |
+| **macOS** | macOS Keychain → file fallback | LaunchAgent | `curl \| bash` |
 | **Windows** (native) | `%USERPROFILE%\.claude\.credentials.json` | Task Scheduler | PowerShell |
 
 ## Prerequisites
@@ -49,7 +49,7 @@ This tool bridges the gap: it reads your existing Claude CLI OAuth tokens and wr
 
 ```
 ┌─────────────────────────┐      sync script      ┌─────────────────────────────┐
-│  ~/.claude/              │     (cron / task)      │  ~/.local/share/opencode/   │
+│  ~/.claude/              │  (launchd/cron/task)   │  ~/.local/share/opencode/   │
 │  .credentials.json       │ ──────────────────▶   │  auth.json                  │
 │                          │                       │                             │
 │  claudeAiOauth {         │   reads & compares    │  anthropic {                │
@@ -84,7 +84,7 @@ This tool bridges the gap: it reads your existing Claude CLI OAuth tokens and wr
 5. If they're identical, it logs the remaining token lifetime and exits (no unnecessary writes)
 6. Once the credentials are in `auth.json`, OpenCode's built-in `opencode-anthropic-auth` plugin handles everything else: token refresh, request signing, OAuth beta headers, and user-agent
 
-Claude CLI tokens are valid for approximately **5–6 hours**. The sync job runs every hour (cron on Linux/macOS, Task Scheduler on Windows), so if you re-authenticate with Claude CLI, OpenCode picks up the new tokens automatically.
+Claude CLI tokens are valid for approximately **5–6 hours**. The sync job runs every hour (LaunchAgent on macOS, cron on Linux, Task Scheduler on Windows), so if you re-authenticate with Claude CLI, OpenCode picks up the new tokens automatically. On macOS, LaunchAgent catches up on missed runs after sleep/wake — no missed syncs even with the lid closed.
 
 ## Install (detailed)
 

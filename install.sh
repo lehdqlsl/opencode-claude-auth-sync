@@ -69,19 +69,58 @@ if [[ -f "$OPENCODE_CONFIG" ]] && grep -q "opencode-claude-auth" "$OPENCODE_CONF
   echo "    This package is incompatible. Please remove it manually from the 'plugin' array."
 fi
 
-echo "==> Setting up cron (every hour)..."
-CRON_CMD="0 * * * * ${INSTALL_DIR}/${SCRIPT_NAME} >> ${HOME}/.local/share/opencode/sync-claude.log 2>&1 ${CRON_MARKER}"
+if [[ "$(uname)" == "Darwin" ]]; then
+  echo "==> Setting up LaunchAgent (every hour)..."
+  PLIST_DIR="${HOME}/Library/LaunchAgents"
+  PLIST_NAME="com.opencode.claude-sync"
+  PLIST_PATH="${PLIST_DIR}/${PLIST_NAME}.plist"
+  LOG_PATH="${HOME}/.local/share/opencode/sync-claude.log"
 
-if command -v crontab >/dev/null 2>&1; then
-  if crontab -l 2>/dev/null | grep -qF "$CRON_MARKER"; then
-    echo "    Cron already registered. Skipping."
-  else
-    (crontab -l 2>/dev/null || true; echo "$CRON_CMD") | crontab -
-    echo "    Cron registered."
-  fi
+  mkdir -p "$PLIST_DIR"
+
+  cat > "$PLIST_PATH" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>${PLIST_NAME}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>${INSTALL_DIR}/${SCRIPT_NAME}</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>3600</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>${LOG_PATH}</string>
+  <key>StandardErrorPath</key>
+  <string>${LOG_PATH}</string>
+</dict>
+</plist>
+PLIST
+
+  launchctl unload "$PLIST_PATH" 2>/dev/null || true
+  launchctl load "$PLIST_PATH"
+  echo "    LaunchAgent registered: $PLIST_NAME"
+  echo "    Runs every hour + on login + catches up after sleep."
+
 else
-  echo "    WARNING: crontab not found. Set up a periodic job manually:"
-  echo "      ${INSTALL_DIR}/${SCRIPT_NAME}"
+  echo "==> Setting up cron (every hour)..."
+  CRON_CMD="0 * * * * ${INSTALL_DIR}/${SCRIPT_NAME} >> ${HOME}/.local/share/opencode/sync-claude.log 2>&1 ${CRON_MARKER}"
+
+  if command -v crontab >/dev/null 2>&1; then
+    if crontab -l 2>/dev/null | grep -qF "$CRON_MARKER"; then
+      echo "    Cron already registered. Skipping."
+    else
+      (crontab -l 2>/dev/null || true; echo "$CRON_CMD") | crontab -
+      echo "    Cron registered."
+    fi
+  else
+    echo "    WARNING: crontab not found. Set up a periodic job manually:"
+    echo "      ${INSTALL_DIR}/${SCRIPT_NAME}"
+  fi
 fi
 
 echo ""
