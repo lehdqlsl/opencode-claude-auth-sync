@@ -22,11 +22,17 @@ if (!creds.accessToken || !creds.refreshToken || !creds.expiresAt) {
 
 const auth = JSON.parse(fs.readFileSync('${OPENCODE_AUTH}', 'utf8'));
 
+const remaining = creds.expiresAt - Date.now();
+const hours = Math.floor(remaining / 3600000);
+const mins = Math.floor((remaining % 3600000) / 60000);
+const status = remaining > 0 ? hours + 'h ' + mins + 'm remaining' : 'EXPIRED';
+
 if (
   auth.anthropic &&
   auth.anthropic.access === creds.accessToken &&
   auth.anthropic.refresh === creds.refreshToken
 ) {
+  console.log(new Date().toISOString() + ' already in sync (' + status + ')');
   process.exit(0);
 }
 
@@ -38,5 +44,5 @@ auth.anthropic = {
 };
 
 fs.writeFileSync('${OPENCODE_AUTH}', JSON.stringify(auth, null, 2));
-console.log(new Date().toISOString() + ' synced claude credentials to opencode');
+console.log(new Date().toISOString() + ' synced (' + status + ')');
 "

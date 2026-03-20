@@ -55,8 +55,8 @@ if [[ -f "$OPENCODE_CONFIG" ]] && grep -q "opencode-claude-auth" "$OPENCODE_CONF
   "
 fi
 
-echo "==> Setting up cron (every 30 minutes)..."
-CRON_CMD="*/30 * * * * ${INSTALL_DIR}/${SCRIPT_NAME} >> ${HOME}/.local/share/opencode/sync-claude.log 2>&1"
+echo "==> Setting up cron (every hour)..."
+CRON_CMD="0 * * * * ${INSTALL_DIR}/${SCRIPT_NAME} >> ${HOME}/.local/share/opencode/sync-claude.log 2>&1"
 
 if crontab -l 2>/dev/null | grep -qF "$SCRIPT_NAME"; then
   echo "    Cron already registered. Skipping."

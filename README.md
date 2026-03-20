@@ -39,10 +39,10 @@ This tool bridges the gap: it reads your existing Claude CLI OAuth tokens (`~/.c
 2. This sync script reads the `claudeAiOauth` object from that file
 3. It compares the `accessToken` and `refreshToken` with what's currently in OpenCode's `auth.json`
 4. If they differ (or the Anthropic entry doesn't exist), it writes the new credentials
-5. If they're identical, it exits silently (no unnecessary writes)
+5. If they're identical, it logs the remaining token lifetime and exits (no unnecessary writes)
 6. Once the credentials are in `auth.json`, OpenCode's built-in `opencode-anthropic-auth@0.0.13` plugin handles everything else: token refresh, request signing, OAuth beta headers, and user-agent
 
-The cron job runs every 30 minutes, so if you re-authenticate with Claude CLI, OpenCode picks up the new tokens automatically.
+Claude CLI tokens are valid for approximately **5–6 hours**. The cron job runs every hour, so if you re-authenticate with Claude CLI, OpenCode picks up the new tokens automatically.
 
 ## Prerequisites
 
@@ -77,7 +77,7 @@ The installer will:
 1. Install the sync script to `~/.local/bin/sync-claude-to-opencode.sh`
 2. Run an initial credential sync
 3. Remove `opencode-claude-auth` from your OpenCode config if present (see [Known Issues](#known-issues))
-4. Set up a cron job to sync every 30 minutes
+4. Set up a cron job to sync every hour
 
 ### Manual
 
@@ -108,7 +108,7 @@ grep "opencode-claude-auth" ~/.config/opencode/opencode.json
 **Step 4.** (Optional) Set up cron for automatic syncing:
 
 ```bash
-(crontab -l 2>/dev/null; echo "*/30 * * * * \$HOME/.local/bin/sync-claude-to-opencode.sh >> \$HOME/.local/share/opencode/sync-claude.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "0 * * * * \$HOME/.local/bin/sync-claude-to-opencode.sh >> \$HOME/.local/share/opencode/sync-claude.log 2>&1") | crontab -
 ```
 
 ## Verify
@@ -159,7 +159,7 @@ The installer automatically removes it from your OpenCode plugin config if detec
 
 ### Token expiration
 
-When your Claude CLI token expires, re-authenticate by running `claude` in your terminal. The cron job will pick up the new credentials within 30 minutes. For immediate sync, run:
+When your Claude CLI token expires, re-authenticate by running `claude` in your terminal. The cron job will pick up the new credentials within an hour. For immediate sync, run:
 
 ```bash
 ~/.local/bin/sync-claude-to-opencode.sh
