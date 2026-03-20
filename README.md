@@ -125,13 +125,13 @@ This tool bridges the gap: it reads your existing Claude CLI OAuth tokens and wr
 
 1. Claude CLI stores OAuth credentials after you run `claude` and authenticate (Keychain on macOS, file on Linux/Windows)
 2. This sync script detects the platform and reads the `claudeAiOauth` object from the appropriate source
-3. **If the token is expiring within 60 seconds**, it automatically runs `claude` CLI to refresh the token before syncing
+3. **If the token is already expired**, it automatically runs `claude` CLI to refresh the token before syncing
 4. It compares the `accessToken`, `refreshToken`, and `expiresAt` with what's currently in OpenCode's `auth.json`
 5. If they differ (or the Anthropic entry doesn't exist), it writes the new credentials
 6. If they're identical, it logs the remaining token lifetime and exits (no unnecessary writes)
 7. Once the credentials are in `auth.json`, OpenCode's built-in `opencode-anthropic-auth` plugin handles everything else: token refresh, request signing, OAuth beta headers, and user-agent
 
-Claude CLI tokens are valid for approximately **5–6 hours**. The sync job runs every **15 minutes** (LaunchAgent on macOS, cron on Linux, Task Scheduler on Windows) and **automatically refreshes tokens before they expire** — no manual re-authentication needed. On macOS, LaunchAgent catches up on missed runs after sleep/wake.
+Claude CLI tokens are valid for approximately **5–6 hours**. The sync job runs every **15 minutes** (LaunchAgent on macOS, cron on Linux, Task Scheduler on Windows). Once a token has expired, the script uses Claude CLI to refresh it and then re-syncs `auth.json`. On macOS, LaunchAgent catches up on missed runs after sleep/wake.
 
 ## Install (detailed)
 
@@ -149,8 +149,8 @@ Install opencode-claude-auth-sync from https://github.com/lehdqlsl/opencode-clau
    # Windows (PowerShell as Admin)
    irm https://raw.githubusercontent.com/lehdqlsl/opencode-claude-auth-sync/main/install.ps1 | iex
 
-2. Check the sync output. If it says "EXPIRED", the Claude CLI token is stale.
-   Fix: run `claude` in the terminal to re-authenticate, then re-run the sync:
+2. Check the sync output. If it says "EXPIRED", the stored token is stale.
+   The script will try to refresh it automatically via Claude CLI. If that still fails, run `claude` manually, then re-run the sync:
    # Linux / macOS
    ~/.local/bin/sync-claude-to-opencode.sh
    # Windows
@@ -240,7 +240,7 @@ Early versions (v0.2.x) had issues that have since been fixed. If you're on an o
 
 ### Token expiration / "EXPIRED" status
 
-The sync script automatically refreshes tokens via Claude CLI when they're about to expire. In most cases, you'll never see `EXPIRED`.
+The sync script attempts an automatic refresh via Claude CLI once the token is expired. If Claude CLI can refresh successfully, the next sync writes fresh credentials back to OpenCode.
 
 If auto-refresh fails (e.g. `claude` CLI not in PATH, or network issues):
 

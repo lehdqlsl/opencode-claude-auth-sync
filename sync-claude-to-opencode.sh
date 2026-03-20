@@ -2,8 +2,6 @@
 set -euo pipefail
 
 OPENCODE_AUTH="${OPENCODE_AUTH_PATH:-$HOME/.local/share/opencode/auth.json}"
-REFRESH_THRESHOLD=900000  # 15 minutes
-
 MODE="sync"
 case "${1:-}" in
   --status) MODE="status" ;;
@@ -107,7 +105,6 @@ if [[ "$MODE" == "force" ]]; then
     exit 1
   fi
 else
-  export REFRESH_THRESHOLD
   NEED_REFRESH=$(echo "$CLAUDE_JSON" | node --input-type=module -e "
 let input = '';
 for await (const chunk of process.stdin) input += chunk;
@@ -115,7 +112,7 @@ try {
   const raw = JSON.parse(input);
   const creds = raw.claudeAiOauth ?? raw;
   const remaining = (creds.expiresAt || 0) - Date.now();
-  console.log(remaining <= Number(process.env.REFRESH_THRESHOLD) ? 'yes' : 'no');
+  console.log(remaining <= 0 ? 'yes' : 'no');
 } catch { console.log('no'); }
 " 2>/dev/null || echo "no")
 

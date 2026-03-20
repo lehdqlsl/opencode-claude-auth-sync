@@ -2,8 +2,6 @@ $ErrorActionPreference = "Stop"
 
 $claudeCredsPath = if ($env:CLAUDE_CREDENTIALS_PATH) { $env:CLAUDE_CREDENTIALS_PATH } else { Join-Path $HOME ".claude\.credentials.json" }
 $opencodeAuthPath = if ($env:OPENCODE_AUTH_PATH) { $env:OPENCODE_AUTH_PATH } else { Join-Path $HOME ".local\share\opencode\auth.json" }
-$refreshThreshold = 900000 # 15 minutes
-
 $mode = "sync"
 if ($args -contains "--status") { $mode = "status" }
 elseif ($args -contains "--force") { $mode = "force" }
@@ -82,7 +80,7 @@ if ($mode -eq "force") {
     }
 } else {
     $s = Get-TokenStatus $creds
-    if ($s.remaining -le $refreshThreshold) {
+    if ($s.remaining -le 0) {
         Invoke-CliRefresh
         $creds = Read-ClaudeCreds
         if (-not $creds -or -not $creds.accessToken) {
