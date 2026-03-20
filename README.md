@@ -55,9 +55,9 @@ Claude CLI tokens are valid for approximately **5–6 hours**. The sync job runs
 
 | Platform | Claude credentials | Scheduler | Install command |
 |---|---|---|---|
-| **Linux** | `~/.claude/.credentials.json` | cron | `curl \| bash` |
+| **Linux / WSL** | `~/.claude/.credentials.json` | cron | `curl \| bash` |
 | **macOS** | macOS Keychain → file fallback | cron | `curl \| bash` |
-| **Windows** | `%USERPROFILE%\.claude\.credentials.json` | Task Scheduler | PowerShell |
+| **Windows** (native) | `%USERPROFILE%\.claude\.credentials.json` | Task Scheduler | PowerShell |
 
 ## Prerequisites
 
