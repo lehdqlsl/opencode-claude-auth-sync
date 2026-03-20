@@ -1,8 +1,6 @@
 # opencode-claude-auth-sync
 
-> **⚠️ This project is no longer actively maintained.** Anthropic now enforces User-Agent validation on API requests, which this tool cannot fix (it only syncs tokens). For a more complete solution that handles both token sync and User-Agent, use **[griffinmartin/opencode-claude-auth](https://github.com/griffinmartin/opencode-claude-auth)**.
-
-> **🔧 Still getting 429 after switching tools?** The old built-in `opencode-anthropic-auth@0.0.13` plugin may still be cached and interfering. Remove it:
+> **🔧 Getting 429 errors?** The old built-in `opencode-anthropic-auth@0.0.13` plugin may still be cached and interfering with token refresh. Remove it:
 > ```bash
 > rm -rf ~/.cache/opencode/node_modules/opencode-anthropic-auth
 > ```
