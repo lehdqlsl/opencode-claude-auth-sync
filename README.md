@@ -6,6 +6,7 @@ Sync your existing [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) 
 > ```bash
 > rm -rf ~/.cache/opencode/node_modules/opencode-anthropic-auth
 > ```
+> If it keeps coming back, also remove `opencode-anthropic-auth` from `~/.cache/opencode/package.json`.
 > Then restart OpenCode and try again.
 
 > **Why not an npm plugin?** When auth breaks, npm packages pop up fast — but installing unknown packages that handle your OAuth tokens is a risk. This tool is a plain shell script you can read in full before running. No `node_modules`, no dependency tree, no trust required.
@@ -398,6 +399,14 @@ If auto-refresh fails (e.g. `claude` CLI not in PATH, or network issues):
 ### Token refresh failed: 429
 
 This means OpenCode tried to use an expired token. The sync script's auto-refresh should prevent this, but if it occurs, re-authenticate with `claude` and sync again.
+
+If the deprecated built-in plugin keeps being reinstalled, remove both:
+
+```bash
+rm -rf ~/.cache/opencode/node_modules/opencode-anthropic-auth
+```
+
+and the `opencode-anthropic-auth` dependency entry from `~/.cache/opencode/package.json`, then restart OpenCode.
 
 ### Sync log
 
