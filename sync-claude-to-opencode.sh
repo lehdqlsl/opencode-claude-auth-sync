@@ -328,6 +328,8 @@ console.error('Removed: ' + label + '. ' + Object.keys(store.accounts).length + 
 }
 
 cmd_list() {
+  maybe_heal_active_account_from_live
+
   if ! has_accounts; then
     echo "No accounts stored. Use --add <label> to add one." >&2
     exit 0
@@ -459,6 +461,8 @@ console.error('Rotated to: ' + store.active + ' (' + (nextIndex + 1) + '/' + lab
 # ==========================================================================
 
 cmd_status() {
+  maybe_heal_active_account_from_live
+
   if has_accounts; then
     local status_output
     status_output=$(node --input-type=module -e "
@@ -664,7 +668,53 @@ fs.renameSync(tmpPath, accountsPath);
   release_accounts_lock
 }
 
+maybe_heal_active_account_from_live() {
+  if ! has_accounts; then return; fi
+
+  local claude_json
+  claude_json=$(read_claude_creds)
+  [[ -z "$claude_json" ]] && return
+  [[ ! -f "$OPENCODE_AUTH" ]] && return
+
+  local should_heal
+  should_heal=$(CLAUDE_JSON="$claude_json" OPENCODE_AUTH_FILE="$OPENCODE_AUTH" ACCOUNTS_FILE="$ACCOUNTS_FILE" node --input-type=module -e "
+import fs from 'node:fs';
+
+try {
+  const raw = JSON.parse(process.env.CLAUDE_JSON || '');
+  const claude = raw.claudeAiOauth ?? raw;
+  const auth = JSON.parse(fs.readFileSync(process.env.OPENCODE_AUTH_FILE, 'utf8'));
+  const store = JSON.parse(fs.readFileSync(process.env.ACCOUNTS_FILE, 'utf8'));
+  const active = store.active;
+  const acc = active ? store.accounts?.[active] : null;
+
+  if (!acc || !claude.accessToken || !claude.refreshToken || !claude.expiresAt) {
+    console.log('no');
+    process.exit(0);
+  }
+
+  const live = auth.anthropic;
+  const authMatchesClaude = !!live &&
+    live.type === 'oauth' &&
+    live.access === claude.accessToken &&
+    live.refresh === claude.refreshToken &&
+    live.expires === claude.expiresAt;
+
+  const liveIsNewer = Number(claude.expiresAt) > Number(acc.expiresAt || 0);
+  console.log(authMatchesClaude && liveIsNewer ? 'yes' : 'no');
+} catch {
+  console.log('no');
+}
+" 2>/dev/null)
+
+  if [[ "$should_heal" == "yes" ]]; then
+    update_account_in_store "$claude_json"
+  fi
+}
+
 do_sync() {
+  maybe_heal_active_account_from_live
+
   local CREDS_JSON
   CREDS_JSON=$(get_active_creds_json)
 

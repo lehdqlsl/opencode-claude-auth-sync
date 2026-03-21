@@ -231,6 +231,36 @@ function Update-AccountInStore {
     }
 }
 
+function Maybe-HealActiveAccountFromLive {
+    if (-not (Has-Accounts)) { return }
+    if (-not (Test-Path $opencodeAuthPath)) { return }
+
+    $claudeCreds = Read-ClaudeCreds
+    if (-not $claudeCreds) { return }
+
+    try {
+        $auth = Get-Content $opencodeAuthPath -Raw | ConvertFrom-Json
+    } catch {
+        return
+    }
+
+    $store = Read-AccountsStore
+    if (-not $store.active -or -not $store.accounts.ContainsKey($store.active)) { return }
+
+    $acc = $store.accounts[$store.active]
+    $authMatchesClaude = $auth.anthropic -and
+        $auth.anthropic.type -eq "oauth" -and
+        $auth.anthropic.access -eq $claudeCreds.accessToken -and
+        $auth.anthropic.refresh -eq $claudeCreds.refreshToken -and
+        [long]$auth.anthropic.expires -eq [long]$claudeCreds.expiresAt
+
+    $liveIsNewer = [long]$claudeCreds.expiresAt -gt [long]$acc.expiresAt
+
+    if ($authMatchesClaude -and $liveIsNewer) {
+        Update-AccountInStore $claudeCreds
+    }
+}
+
 function Auto-RotateToValid {
     if (-not (Has-Accounts)) { return $false }
 
@@ -301,6 +331,8 @@ function Write-OpenCodeAuth {
 }
 
 function Do-Sync {
+    Maybe-HealActiveAccountFromLive
+
     $creds = Get-ActiveCreds
     if (-not $creds) {
         Write-Output "No credentials available"
@@ -328,6 +360,8 @@ function Do-Sync {
 }
 
 function Show-Status {
+    Maybe-HealActiveAccountFromLive
+
     if (Has-Accounts) {
         $store = Read-AccountsStore
         if (-not $store.active -or -not $store.accounts.ContainsKey($store.active)) {
@@ -454,6 +488,8 @@ function Remove-Account {
 }
 
 function List-Accounts {
+    Maybe-HealActiveAccountFromLive
+
     if (-not (Has-Accounts)) {
         Write-Output "No accounts stored. Use --add <label> to add one."
         exit 0
