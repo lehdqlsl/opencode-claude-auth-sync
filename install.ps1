@@ -2,6 +2,7 @@ $ErrorActionPreference = "Stop"
 
 $installDir = Join-Path $HOME ".local\bin"
 $scriptName = "sync-claude-to-opencode.ps1"
+$aliasName = "claude-sync.cmd"
 $repoRaw = "https://raw.githubusercontent.com/lehdqlsl/opencode-claude-auth-sync/main"
 
 $claudeCreds = Join-Path $HOME ".claude\.credentials.json"
@@ -30,6 +31,10 @@ Write-Output "==> Installing sync script to $installDir\$scriptName..."
 New-Item -ItemType Directory -Force -Path $installDir | Out-Null
 Invoke-WebRequest -Uri "$repoRaw/$scriptName" -OutFile "$installDir\$scriptName"
 
+$aliasPath = Join-Path $installDir $aliasName
+$aliasContent = "@echo off`r`nsetlocal`r`npowershell.exe -ExecutionPolicy Bypass -File `"%~dp0$scriptName`" %*`r`n"
+[System.IO.File]::WriteAllText($aliasPath, $aliasContent, $utf8NoBom)
+
 Write-Output "==> Running initial sync..."
 # Prefer pwsh (PS 7+) over powershell.exe (5.1) for UTF-8 correctness
 $psExe = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell.exe" }
@@ -51,7 +56,7 @@ $noScheduler = $args -contains "--no-scheduler"
 
 if ($noScheduler) {
     Write-Output "==> Skipping scheduler setup (--no-scheduler)."
-    Write-Output "    Run manually when needed: $installDir\$scriptName"
+    Write-Output "    Run manually when needed: $installDir\$aliasName"
 } else {
     Write-Output "==> Setting up Task Scheduler (every 15 minutes)..."
     $taskName = "SyncClaudeToOpenCode"
@@ -69,5 +74,7 @@ if ($noScheduler) {
 
 Write-Output ""
 Write-Output "Done! Verify with:"
+Write-Output "  claude-sync --status        # Check token + quota status"
+Write-Output "  claude-sync                 # Sync active account"
 Write-Output "  opencode providers list    # Should show: Anthropic oauth"
 Write-Output "  opencode models anthropic  # Should list Claude models"

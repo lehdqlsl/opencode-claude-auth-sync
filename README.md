@@ -32,8 +32,10 @@ curl -fsSL https://raw.githubusercontent.com/lehdqlsl/opencode-claude-auth-sync/
 
 Then just run the sync manually whenever you need it:
 ```bash
-~/.local/bin/sync-claude-to-opencode.sh          # Linux / macOS
-& "$HOME\.local\bin\sync-claude-to-opencode.ps1"  # Windows
+claude-sync                                     # Linux / macOS (after install)
+~/.local/bin/sync-claude-to-opencode.sh         # Linux / macOS direct path
+claude-sync                                     # Windows (after install)
+& "$HOME\.local\bin\sync-claude-to-opencode.ps1"  # Windows direct path
 ```
 
 ### Verify

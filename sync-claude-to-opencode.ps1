@@ -148,6 +148,39 @@ function Get-TokenStatus {
     }
 }
 
+function Show-UsageStatus {
+    param($AccessToken)
+
+    if (-not $AccessToken) { return }
+
+    try {
+        $usage = Invoke-RestMethod -Uri "https://api.anthropic.com/api/oauth/usage" -Headers @{
+            Authorization = "Bearer $AccessToken"
+            "anthropic-beta" = "oauth-2025-04-20"
+        }
+    } catch {
+        return
+    }
+
+    $formatReset = {
+        param($Value)
+        if (-not $Value) { return "?" }
+        try { return ([datetime]$Value).ToUniversalTime().ToString("o") } catch { return [string]$Value }
+    }
+
+    $formatUtil = {
+        param($Value)
+        if ($null -eq $Value) { return "?" }
+        return [string]$Value
+    }
+
+    Write-Output "Usage:   5h $(& $formatUtil $usage.five_hour.utilization)% (reset: $(& $formatReset $usage.five_hour.resets_at))"
+    Write-Output "         7d $(& $formatUtil $usage.seven_day.utilization)% (reset: $(& $formatReset $usage.seven_day.resets_at))"
+    if ($null -ne $usage.seven_day_sonnet -and $null -ne $usage.seven_day_sonnet.utilization) {
+        Write-Output "         sonnet $(& $formatUtil $usage.seven_day_sonnet.utilization)%"
+    }
+}
+
 function Get-ActiveCreds {
     if (Has-Accounts) {
         $store = Read-AccountsStore
@@ -305,6 +338,7 @@ function Show-Status {
         if ($acc.subscriptionType) {
             Write-Output "Plan:    $($acc.subscriptionType)"
         }
+        Show-UsageStatus $acc.accessToken
         return
     }
 
@@ -322,6 +356,7 @@ function Show-Status {
         Write-Output "Status:  valid ($($status.Display))"
         Write-Output "Expires: $($status.Expires)"
     }
+    Show-UsageStatus $creds.accessToken
 }
 
 function Add-Account {

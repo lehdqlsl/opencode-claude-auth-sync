@@ -3,6 +3,7 @@ set -euo pipefail
 
 INSTALL_DIR="${HOME}/.local/bin"
 SCRIPT_NAME="sync-claude-to-opencode.sh"
+ALIAS_NAME="claude-sync"
 REPO_RAW="https://raw.githubusercontent.com/lehdqlsl/opencode-claude-auth-sync/main"
 CRON_MARKER="# opencode-claude-auth-sync"
 
@@ -52,6 +53,7 @@ else
 fi
 
 chmod +x "${INSTALL_DIR}/${SCRIPT_NAME}"
+ln -sf "${INSTALL_DIR}/${SCRIPT_NAME}" "${INSTALL_DIR}/${ALIAS_NAME}"
 
 echo "==> Running initial sync..."
 if "${INSTALL_DIR}/${SCRIPT_NAME}"; then
@@ -76,7 +78,7 @@ fi
 
 if [[ "$NO_SCHEDULER" == "true" ]]; then
   echo "==> Skipping scheduler setup (--no-scheduler)."
-  echo "    Run manually when needed: ${INSTALL_DIR}/${SCRIPT_NAME}"
+  echo "    Run manually when needed: ${INSTALL_DIR}/${ALIAS_NAME}"
 
 elif [[ "$(uname)" == "Darwin" ]]; then
   echo "==> Setting up LaunchAgent (every 15 minutes)..."
@@ -137,5 +139,7 @@ fi
 
 echo ""
 echo "Done! Verify with:"
+echo "  ${ALIAS_NAME} --status         # Check token + quota status"
+echo "  ${ALIAS_NAME}                 # Sync active account"
 echo "  opencode providers list    # Should show: Anthropic oauth"
 echo "  opencode models anthropic  # Should list Claude models"

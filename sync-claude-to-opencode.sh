@@ -98,6 +98,40 @@ refresh_via_cli() {
   timeout 60 claude -p . --model claude-haiku-4-5 </dev/null >/dev/null 2>&1 || true
 }
 
+print_usage_status() {
+  local access_token="$1"
+  [[ -z "$access_token" ]] && return 0
+  command -v curl >/dev/null 2>&1 || return 0
+
+  curl -fsS \
+    -H "Authorization: Bearer $access_token" \
+    -H "anthropic-beta: oauth-2025-04-20" \
+    https://api.anthropic.com/api/oauth/usage 2>/dev/null | node --input-type=module -e "
+let input = '';
+for await (const chunk of process.stdin) input += chunk;
+if (!input) process.exit(0);
+
+const usage = JSON.parse(input);
+
+const formatReset = (value) => {
+  if (!value) return '?';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toISOString();
+};
+
+const formatUtil = (value) => {
+  if (value == null) return '?';
+  return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(1)));
+};
+
+console.log('Usage:   5h ' + formatUtil(usage.five_hour?.utilization) + '% (reset: ' + formatReset(usage.five_hour?.resets_at) + ')');
+console.log('         7d ' + formatUtil(usage.seven_day?.utilization) + '% (reset: ' + formatReset(usage.seven_day?.resets_at) + ')');
+if (usage.seven_day_sonnet?.utilization != null) {
+  console.log('         sonnet ' + formatUtil(usage.seven_day_sonnet.utilization) + '%');
+}
+" 2>/dev/null || true
+}
+
 # --- Accounts store helpers ---
 
 has_accounts() {
@@ -418,7 +452,8 @@ console.error('Rotated to: ' + store.active + ' (' + (nextIndex + 1) + '/' + lab
 
 cmd_status() {
   if has_accounts; then
-    node --input-type=module -e "
+    local status_output
+    status_output=$(node --input-type=module -e "
 import fs from 'node:fs';
 
 const store = JSON.parse(fs.readFileSync('${ACCOUNTS_FILE}', 'utf8'));
@@ -445,7 +480,17 @@ if (remaining <= 0) {
   console.log('Expires: ' + new Date(acc.expiresAt).toISOString());
 }
 if (acc.subscriptionType) console.log('Plan:    ' + acc.subscriptionType);
-"
+")
+    local active_access
+    active_access=$(node --input-type=module -e "
+import fs from 'node:fs';
+
+const store = JSON.parse(fs.readFileSync('${ACCOUNTS_FILE}', 'utf8'));
+const acc = store.accounts[store.active];
+if (acc?.accessToken) console.log(acc.accessToken);
+" 2>/dev/null)
+    printf '%s\n' "$status_output"
+    print_usage_status "$active_access"
     return
   fi
 
@@ -456,7 +501,8 @@ if (acc.subscriptionType) console.log('Plan:    ' + acc.subscriptionType);
     exit 0
   fi
 
-  echo "$CLAUDE_JSON" | node --input-type=module -e "
+  local status_output
+  status_output=$(echo "$CLAUDE_JSON" | node --input-type=module -e "
 let input = '';
 for await (const chunk of process.stdin) input += chunk;
 try {
@@ -477,7 +523,17 @@ try {
   console.error('Failed to parse credentials: ' + e.message);
   process.exit(1);
 }
-"
+")
+  local active_access
+  active_access=$(echo "$CLAUDE_JSON" | node --input-type=module -e "
+let input = '';
+for await (const chunk of process.stdin) input += chunk;
+const raw = JSON.parse(input);
+const creds = raw.claudeAiOauth ?? raw;
+if (creds.accessToken) console.log(creds.accessToken);
+" 2>/dev/null)
+  printf '%s\n' "$status_output"
+  print_usage_status "$active_access"
 }
 
 # ==========================================================================
