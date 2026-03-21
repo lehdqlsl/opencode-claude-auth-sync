@@ -1,13 +1,8 @@
 # opencode-claude-auth-sync
 
-> **🔧 Getting 429 errors?** The old built-in `opencode-anthropic-auth@0.0.13` plugin may still be cached and interfering with token refresh. Remove it:
-> ```bash
-> rm -rf ~/.cache/opencode/node_modules/opencode-anthropic-auth
-> ```
-
 Sync your existing [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) credentials to [OpenCode](https://opencode.ai) — no separate Anthropic login needed.
 
-> **Heads up (March 2026):** Anthropic is tightening server-side enforcement. Token sync still works here, but if you keep seeing `429` even after syncing, remove the deprecated cached plugin first:
+> **🔧 Getting 429 errors?** The old built-in `opencode-anthropic-auth@0.0.13` plugin may still be cached and interfering with token refresh. Remove it:
 > ```bash
 > rm -rf ~/.cache/opencode/node_modules/opencode-anthropic-auth
 > ```
