@@ -100,6 +100,11 @@ elif [[ "$(uname)" == "Darwin" ]]; then
   <array>
     <string>${INSTALL_DIR}/${SCRIPT_NAME}</string>
   </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>${PATH}</string>
+  </dict>
   <key>StartInterval</key>
   <integer>900</integer>
   <key>RunAtLoad</key>
