@@ -65,7 +65,7 @@ claude-sync --force
 
 ## Multi-Account
 
-`v0.4.1` expands multi-account usage with quota visibility in `--status` and the shorter `claude-sync` command.
+Manage multiple Claude accounts with quota visibility, automatic rotation, and the shorter `claude-sync` command.
 
 Important: Claude CLI itself only supports one logged-in account at a time. Multi-account here means this tool stores multiple credential sets in its own account store, then switches which one is written into OpenCode's `auth.json`.
 
@@ -202,7 +202,7 @@ This tool is **not an npm package** — it's a plain shell script you can read b
 - Single-file scripts: [`sync-claude-to-opencode.sh`](sync-claude-to-opencode.sh) (bash) / [`.ps1`](sync-claude-to-opencode.ps1) (PowerShell)
 - Credentials are passed via stdin, never exposed in process arguments
 - All JSON writes are atomic (temp file + rename) to prevent corruption
-- Review the source before installing: it's ~100 lines per script
+- Review the source before installing: [`sync-claude-to-opencode.sh`](sync-claude-to-opencode.sh) (~850 lines) / [`.ps1`](sync-claude-to-opencode.ps1) (~620 lines)
 
 ```bash
 # Inspect before running
@@ -219,7 +219,7 @@ curl -fsSL https://raw.githubusercontent.com/lehdqlsl/opencode-claude-auth-sync/
 
 OpenCode no longer provides built-in Anthropic login. If you want to use Claude models (Opus, Sonnet, Haiku, etc.) in OpenCode, you need to bring your own credentials.
 
-This tool bridges the gap: it reads your existing Claude CLI OAuth tokens and writes them into OpenCode's auth store, letting OpenCode's bundled `opencode-anthropic-auth` plugin handle the rest.
+This tool bridges the gap: it reads your existing Claude CLI OAuth tokens and writes them into OpenCode's auth store, letting an `opencode-anthropic-auth` plugin handle the rest (see [v1.3+ compatibility](#opencode-v13-compatibility)).
 
 ## How It Works
 
@@ -237,11 +237,10 @@ This tool bridges the gap: it reads your existing Claude CLI OAuth tokens and wr
 └─────────────────────────┘                       └─────────────────────────────┘
                                                              │
                                                              ▼
-                                                   OpenCode built-in plugin
-                                                   (opencode-anthropic-auth)
-                                                   handles token refresh,
-                                                   request signing, OAuth beta
-                                                   headers, and API routing.
+                                                    opencode-anthropic-auth plugin
+                                                    handles token refresh,
+                                                    request signing, OAuth beta
+                                                    headers, and API routing.
 ```
 
 **Credential sources (platform-aware):**
@@ -259,7 +258,7 @@ This tool bridges the gap: it reads your existing Claude CLI OAuth tokens and wr
 4. It compares the `accessToken`, `refreshToken`, and `expiresAt` with what's currently in OpenCode's `auth.json`
 5. If they differ (or the Anthropic entry doesn't exist), it writes the new credentials
 6. If they're identical, it logs the remaining token lifetime and exits (no unnecessary writes)
-7. Once the credentials are in `auth.json`, OpenCode's built-in `opencode-anthropic-auth` plugin handles everything else: token refresh, request signing, OAuth beta headers, and user-agent
+7. Once the credentials are in `auth.json`, the `opencode-anthropic-auth` plugin handles everything else: token refresh, request signing, OAuth beta headers, and user-agent
 
 Claude CLI tokens are valid for approximately **5–6 hours**. The sync job runs every **15 minutes** (LaunchAgent on macOS, cron on Linux, Task Scheduler on Windows). Once a token has expired, the script uses Claude CLI to refresh it and then re-syncs `auth.json`. On macOS, LaunchAgent catches up on missed runs after sleep/wake.
 
@@ -408,6 +407,23 @@ rm -rf ~/.cache/opencode/node_modules/opencode-anthropic-auth
 
 and the `opencode-anthropic-auth` dependency entry from `~/.cache/opencode/package.json`, then restart OpenCode.
 
+If you're on OpenCode `v1.2.27` and the deprecated plugin keeps coming back on every startup, that's an upstream built-in plugin issue. A practical CLI-side workaround is:
+
+1. Start OpenCode with `OPENCODE_DISABLE_DEFAULT_PLUGINS=true`
+2. Explicitly register `opencode-claude-auth@latest` in `opencode.json`
+
+Example:
+
+```json
+{
+  "plugin": [
+    "opencode-claude-auth@latest"
+  ]
+}
+```
+
+This disables the old built-in plugin injection while still loading a Claude auth provider explicitly.
+
 ### Sync log
 
 Check the sync history:
@@ -420,21 +436,23 @@ cat ~/.local/share/opencode/sync-claude.log
 
 OpenCode v1.3 removes the built-in `opencode-anthropic-auth` plugin ([PR #18186](https://github.com/anomalyco/opencode/pull/18186)) per Anthropic's legal request. This tool depends on that plugin to handle token refresh and request signing.
 
-**While the npm package is still available**, you can manually register it in your `opencode.json`:
+You need to register an auth plugin manually in your `opencode.json`. Pick one:
+
+| Plugin | Install | Notes |
+|---|---|---|
+| [`@ex-machina/opencode-anthropic-auth`](https://www.npmjs.com/package/@ex-machina/opencode-anthropic-auth) | `npm i -g @ex-machina/opencode-anthropic-auth` | TypeScript rewrite, fixes 429 bug |
+| [`op-anthropic-auth`](https://www.npmjs.com/package/op-anthropic-auth) | `npm i -g op-anthropic-auth` | Fork of the original |
+| `opencode-anthropic-auth@0.0.13` | `npm i -g opencode-anthropic-auth@0.0.13` | Original (deprecated) |
+
+Then add to `opencode.json`:
 
 ```json
 {
-  "plugin": ["opencode-anthropic-auth@0.0.13"]
+  "plugin": ["@ex-machina/opencode-anthropic-auth"]
 }
 ```
 
-**If the npm package gets unpublished**, back up the package locally before it disappears:
-
-```bash
-npm pack opencode-anthropic-auth@0.0.13
-```
-
-This downloads `opencode-anthropic-auth-0.0.13.tgz` to your current directory. Extract it and reference the local file in your `opencode.json`:
+**If the npm packages get unpublished**, this repo includes a bundled copy of the original plugin (`opencode-anthropic-auth-0.0.13.tgz`). Extract it and reference the local file:
 
 ```json
 {
