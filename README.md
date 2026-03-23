@@ -2,16 +2,31 @@
 
 Sync your existing [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) credentials to [OpenCode](https://opencode.ai) — no separate Anthropic login needed.
 
-> **Scope note:** This works best on OpenCode `1.2.x`, where Anthropic provider support is still present. On OpenCode `1.3.0+`, this tool only syncs credentials — you must also install a separate Anthropic auth plugin.
+---
 
-> **🔧 Getting 429 errors?** The old built-in `opencode-anthropic-auth@0.0.13` plugin may still be cached and interfering with token refresh. Remove it:
-> ```bash
-> rm -rf ~/.cache/opencode/node_modules/opencode-anthropic-auth
-> ```
-> If it keeps coming back, also remove `opencode-anthropic-auth` from `~/.cache/opencode/package.json`.
-> Then restart OpenCode and try again.
+> ⚠️ **OpenCode 1.3.0+ users:** This tool only syncs credentials. You must also install a separate Anthropic auth plugin. See [v1.3+ compatibility](#opencode-v13-compatibility).
 
-> **Why not an npm plugin?** When auth breaks, npm packages pop up fast — but installing unknown packages that handle your OAuth tokens is a risk. This tool is a plain shell script you can read in full before running. No `node_modules`, no dependency tree, no trust required.
+---
+
+<details>
+<summary>🔧 <strong>Getting 429 errors?</strong></summary>
+
+The old built-in `opencode-anthropic-auth@0.0.13` plugin may still be cached. Remove it:
+
+```bash
+rm -rf ~/.cache/opencode/node_modules/opencode-anthropic-auth
+```
+
+If it keeps coming back, also remove `opencode-anthropic-auth` from `~/.cache/opencode/package.json`. Then restart OpenCode.
+
+</details>
+
+<details>
+<summary>🤔 <strong>Why not an npm plugin?</strong></summary>
+
+When auth breaks, npm packages pop up fast — but installing unknown packages that handle your OAuth tokens is a risk. This tool is a plain shell script you can read in full before running. No `node_modules`, no dependency tree, no trust required.
+
+</details>
 
 ## Quick Start
 
