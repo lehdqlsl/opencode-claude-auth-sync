@@ -2,6 +2,8 @@
 
 Sync your existing [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) credentials to [OpenCode](https://opencode.ai) — no separate Anthropic login needed.
 
+> **Scope note:** This works best on OpenCode `1.2.x`, where Anthropic provider support is still present. On OpenCode `1.3.0+`, this tool only syncs credentials — you must also install a separate Anthropic auth plugin.
+
 > **🔧 Getting 429 errors?** The old built-in `opencode-anthropic-auth@0.0.13` plugin may still be cached and interfering with token refresh. Remove it:
 > ```bash
 > rm -rf ~/.cache/opencode/node_modules/opencode-anthropic-auth
@@ -434,21 +436,17 @@ cat ~/.local/share/opencode/sync-claude.log
 
 ### OpenCode v1.3+ compatibility
 
-OpenCode v1.3 removes the built-in `opencode-anthropic-auth` plugin ([PR #18186](https://github.com/anomalyco/opencode/pull/18186)) per Anthropic's legal request. This tool depends on that plugin to handle token refresh and request signing.
+OpenCode v1.3 removes the built-in `opencode-anthropic-auth` plugin ([PR #18186](https://github.com/anomalyco/opencode/pull/18186)) per Anthropic's legal request.
 
-You need to register an auth plugin manually in your `opencode.json`. Pick one:
+This tool only syncs credentials into `auth.json`. On OpenCode `1.3.0+`, synced credentials alone are no longer enough because the Anthropic provider is no longer built in.
 
-| Plugin | Install | Notes |
-|---|---|---|
-| [`@ex-machina/opencode-anthropic-auth`](https://www.npmjs.com/package/@ex-machina/opencode-anthropic-auth) | `npm i -g @ex-machina/opencode-anthropic-auth` | TypeScript rewrite, fixes 429 bug |
-| [`op-anthropic-auth`](https://www.npmjs.com/package/op-anthropic-auth) | `npm i -g op-anthropic-auth` | Fork of the original |
-| `opencode-anthropic-auth@0.0.13` | `npm i -g opencode-anthropic-auth@0.0.13` | Original (deprecated) |
+If you're on OpenCode `1.3.0+`, you need to register a separate Anthropic auth plugin manually in your `opencode.json`. Pick one:
 
-Then add to `opencode.json`:
+The original plugin is still available on npm (deprecated):
 
 ```json
 {
-  "plugin": ["@ex-machina/opencode-anthropic-auth"]
+  "plugin": ["opencode-anthropic-auth@0.0.13"]
 }
 ```
 
@@ -460,7 +458,9 @@ Then add to `opencode.json`:
 }
 ```
 
-This tool (`opencode-claude-auth-sync`) itself only copies credentials and has no legal concerns. The compatibility risk is with the auth plugin that actually uses them.
+**Important:** This tool only handles credential sync (copying OAuth tokens into `auth.json`). It does not handle Anthropic API request transformation (headers, User-Agent, beta flags, etc.). If Anthropic changes how requests must be sent, this tool alone will not be enough — you will need an auth plugin that also handles request-level changes.
+
+This tool itself only copies credentials and has no legal concerns. The compatibility risk is with the auth plugin that actually uses them.
 
 ## License
 
