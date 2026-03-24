@@ -7,6 +7,8 @@ $accountsFile = Join-Path $accountsDir "accounts.json"
 $accountsLockDir = Join-Path $accountsDir "accounts.lock"
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
+$Version = "0.5.1"
+
 $mode = "sync"
 $label = $null
 if ($args.Count -gt 0) {
@@ -21,6 +23,8 @@ if ($args.Count -gt 0) {
         "--rotate" { $mode = "rotate" }
         "--help" { $mode = "help" }
         "-h" { $mode = "help" }
+        "--version" { Write-Output "opencode-claude-auth-sync v$Version"; exit 0 }
+        "-v" { Write-Output "opencode-claude-auth-sync v$Version"; exit 0 }
     }
 }
 
@@ -42,6 +46,7 @@ Multi-account:
   --rotate            Rotate to next account (round-robin) and sync
 
   --help              Show this help
+  --version           Show version
 "@ | Write-Output
     exit 0
 }

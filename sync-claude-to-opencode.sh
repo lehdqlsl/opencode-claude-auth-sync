@@ -6,6 +6,8 @@ ACCOUNTS_DIR="${HOME}/.config/opencode-claude-auth-sync"
 ACCOUNTS_FILE="${ACCOUNTS_DIR}/accounts.json"
 ACCOUNTS_LOCK_DIR="${ACCOUNTS_DIR}/accounts.lock"
 
+VERSION="0.5.1"
+
 MODE="sync"
 ARG_LABEL=""
 case "${1:-}" in
@@ -18,6 +20,7 @@ case "${1:-}" in
   --switch)  MODE="switch"; ARG_LABEL="${2:-}" ;;
   --rotate)  MODE="rotate" ;;
   --help|-h) MODE="help" ;;
+  --version|-v) echo "opencode-claude-auth-sync v${VERSION}"; exit 0 ;;
 esac
 
 if [[ "$MODE" == "help" ]]; then
@@ -38,6 +41,7 @@ Multi-account:
   --rotate            Rotate to next account (round-robin) and sync
 
   --help              Show this help
+  --version           Show version
 
 Multi-account setup:
   1. sync-claude-to-opencode.sh --login personal
