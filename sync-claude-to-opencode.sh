@@ -6,7 +6,15 @@ ACCOUNTS_DIR="${HOME}/.config/opencode-claude-auth-sync"
 ACCOUNTS_FILE="${ACCOUNTS_DIR}/accounts.json"
 ACCOUNTS_LOCK_DIR="${ACCOUNTS_DIR}/accounts.lock"
 
-VERSION="0.5.1"
+VERSION="0.5.2"
+
+# Suppress normal output when not running in a terminal (e.g. LaunchAgent/cron).
+# Errors and warnings always go to stderr regardless.
+if [[ -t 1 ]]; then
+  QUIET=0
+else
+  QUIET=1
+fi
 
 MODE="sync"
 ARG_LABEL=""
@@ -762,9 +770,11 @@ try {
   fi
 
   export OPENCODE_AUTH_FILE="$OPENCODE_AUTH"
+  export SYNC_QUIET="$QUIET"
   echo "$CREDS_JSON" | node --input-type=module -e "
 import fs from 'node:fs';
 
+const quiet = process.env.SYNC_QUIET === '1';
 let input = '';
 for await (const chunk of process.stdin) input += chunk;
 
@@ -803,7 +813,7 @@ if (
   auth.anthropic.refresh === creds.refreshToken &&
   auth.anthropic.expires === creds.expiresAt
 ) {
-  console.log(new Date().toISOString() + ' already in sync (' + status + ')');
+  if (!quiet) console.log(new Date().toISOString() + ' already in sync (' + status + ')');
   process.exit(0);
 }
 
@@ -822,7 +832,7 @@ try {
   try { fs.unlinkSync(tmpPath); } catch {}
   throw e;
 }
-console.log(new Date().toISOString() + ' synced (' + status + ')');
+if (!quiet) console.log(new Date().toISOString() + ' synced (' + status + ')');
 "
 }
 
