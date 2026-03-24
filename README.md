@@ -250,47 +250,6 @@ OpenCode no longer provides built-in Anthropic login. If you want to use Claude 
 
 This tool bridges the gap: it reads your existing Claude CLI OAuth tokens and writes them into OpenCode's auth store, letting an `opencode-anthropic-auth` plugin handle the rest (see [v1.3+ compatibility](#opencode-v13-compatibility)).
 
-## How It Works
-
-```
-┌─────────────────────────┐      sync script      ┌─────────────────────────────┐
-│  ~/.claude/              │  (launchd/cron/task)   │  ~/.local/share/opencode/   │
-│  .credentials.json       │ ──────────────────▶   │  auth.json                  │
-│                          │                       │                             │
-│  claudeAiOauth {         │   reads & compares    │  anthropic {                │
-│    accessToken,          │   ─────────────────▶  │    type: "oauth",           │
-│    refreshToken,         │   writes if changed   │    access: <accessToken>,   │
-│    expiresAt             │                       │    refresh: <refreshToken>, │
-│  }                       │                       │    expires: <expiresAt>     │
-│                          │                       │  }                         │
-└─────────────────────────┘                       └─────────────────────────────┘
-                                                             │
-                                                             ▼
-                                                    opencode-anthropic-auth plugin
-                                                    handles token refresh,
-                                                    request signing, OAuth beta
-                                                    headers, and API routing.
-```
-
-**Credential sources (platform-aware):**
-
-| Platform | Claude CLI stores credentials in | How this script reads them |
-|---|---|---|
-| **macOS** | macOS Keychain (service: `Claude Code-credentials`) | `security find-generic-password` |
-| **Linux / WSL / Windows** | `~/.claude/.credentials.json` | Direct file read |
-
-**Step by step:**
-
-1. Claude CLI stores OAuth credentials after you run `claude` and authenticate (Keychain on macOS, file on Linux/Windows)
-2. This sync script detects the platform and reads the `claudeAiOauth` object from the appropriate source
-3. **If the token is already expired**, it automatically runs `claude` CLI to refresh the token before syncing
-4. It compares the `accessToken`, `refreshToken`, and `expiresAt` with what's currently in OpenCode's `auth.json`
-5. If they differ (or the Anthropic entry doesn't exist), it writes the new credentials
-6. If they're identical, it logs the remaining token lifetime and exits (no unnecessary writes)
-7. Once the credentials are in `auth.json`, the `opencode-anthropic-auth` plugin handles everything else: token refresh, request signing, OAuth beta headers, and user-agent
-
-Claude CLI tokens are valid for approximately **5–6 hours**. The sync job runs every **15 minutes** (LaunchAgent on macOS, cron on Linux, Task Scheduler on Windows). Once a token has expired, the script uses Claude CLI to refresh it and then re-syncs `auth.json`. On macOS, LaunchAgent catches up on missed runs after sleep/wake.
-
 ## Install (detailed)
 
 ### Automatic (with AI agent)
