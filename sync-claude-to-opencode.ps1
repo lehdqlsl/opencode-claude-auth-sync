@@ -7,7 +7,7 @@ $accountsFile = Join-Path $accountsDir "accounts.json"
 $accountsLockDir = Join-Path $accountsDir "accounts.lock"
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
-$Version = "0.5.1"
+$Version = "0.5.2"
 
 $mode = "sync"
 $label = $null
@@ -25,6 +25,10 @@ if ($args.Count -gt 0) {
         "-h" { $mode = "help" }
         "--version" { Write-Output "opencode-claude-auth-sync v$Version"; exit 0 }
         "-v" { Write-Output "opencode-claude-auth-sync v$Version"; exit 0 }
+        default {
+            Write-Error "Unknown command: $($args[0]). Run --help for usage."
+            exit 1
+        }
     }
 }
 
@@ -240,6 +244,9 @@ function Maybe-HealActiveAccountFromLive {
     if (-not (Has-Accounts)) { return }
     if (-not (Test-Path $opencodeAuthPath)) { return }
 
+    $store = Read-AccountsStore
+    if (@($store.accounts.Keys).Count -ne 1) { return }
+
     $claudeCreds = Read-ClaudeCreds
     if (-not $claudeCreds) { return }
 
@@ -249,7 +256,6 @@ function Maybe-HealActiveAccountFromLive {
         return
     }
 
-    $store = Read-AccountsStore
     if (-not $store.active -or -not $store.accounts.ContainsKey($store.active)) { return }
 
     $acc = $store.accounts[$store.active]

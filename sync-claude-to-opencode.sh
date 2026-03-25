@@ -29,6 +29,8 @@ case "${1:-}" in
   --rotate)  MODE="rotate" ;;
   --help|-h) MODE="help" ;;
   --version|-v) echo "opencode-claude-auth-sync v${VERSION}"; exit 0 ;;
+  "") ;;
+  *) echo "Unknown command: ${1}" >&2; echo "Run --help for usage." >&2; exit 1 ;;
 esac
 
 if [[ "$MODE" == "help" ]]; then
@@ -682,6 +684,19 @@ fs.renameSync(tmpPath, accountsPath);
 
 maybe_heal_active_account_from_live() {
   if ! has_accounts; then return; fi
+  
+  local account_count
+  account_count=$(ACCOUNTS_FILE="$ACCOUNTS_FILE" node --input-type=module -e "
+import fs from 'node:fs';
+
+try {
+  const store = JSON.parse(fs.readFileSync(process.env.ACCOUNTS_FILE, 'utf8'));
+  console.log(Object.keys(store.accounts ?? {}).length);
+} catch {
+  console.log('0');
+}
+" 2>/dev/null)
+  if [[ "${account_count:-0}" -ne 1 ]]; then return; fi
 
   local claude_json
   claude_json=$(read_claude_creds)
