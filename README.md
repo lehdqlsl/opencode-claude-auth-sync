@@ -106,29 +106,46 @@ Account store:
 
 ### Add accounts
 
-There are two ways to add an account.
+Recommended flow: let Claude CLI handle login, then save the current session with `--add`.
 
-#### Option A: already logged in via `claude` (recommended on SSH / remote machines)
+#### Option A: login with `claude`, then save with `--add` (recommended)
 
-If `claude` is already authenticated with the account you want to save, just capture the current session:
+This is the most reliable path because Claude's login flow can be interactive and may ask you to paste a code back into the terminal.
 
 ```bash
+claude
+# complete login in the browser / terminal
+exit
+
 claude-sync --add personal
+```
+
+Add more accounts by repeating the same flow:
+
+```bash
+claude
+# complete login for another account
+exit
+
 claude-sync --add work
 ```
 
 Windows:
 
 ```powershell
+claude
+# complete login in the browser / terminal
+exit
+
 claude-sync --add personal
 claude-sync --add work
 ```
 
-This is the most reliable path on remote servers because Claude's login flow can be interactive.
+This is also the safest path on SSH / remote machines.
 
-#### Option B: login + save in one command
+#### Option B: login + save in one command (convenience wrapper)
 
-Use `--login` if you want the script to trigger Claude login and then save the result:
+Use `--login` if you want the script to trigger Claude login and then save the result. This is just a thin wrapper around Claude CLI login, so if the login UX feels awkward, use Option A instead.
 
 ```bash
 claude-sync --login personal
@@ -145,7 +162,7 @@ claude-sync --login work
 
 Each `--login` logs out the current Claude session, starts Claude login, then saves the credentials under the given label.
 
-If you're on SSH and `--login` feels awkward, use this flow instead:
+If `--login` feels awkward, use this flow instead:
 
 ```bash
 claude

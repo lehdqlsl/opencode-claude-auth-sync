@@ -43,7 +43,7 @@ Sync:
 
 Multi-account:
   --add <label>       Save current Claude CLI credentials as named account
-  --login <label>     Log into Claude CLI, then save it as named account
+  --login <label>     Convenience wrapper: log into Claude CLI, then save
   --remove <label>    Remove a stored account
   --list              List all stored accounts with status
   --switch <label>    Switch active account and sync
@@ -51,6 +51,11 @@ Multi-account:
 
   --help              Show this help
   --version           Show version
+ 
+Multi-account setup:
+  1. claude                              # complete login first
+  2. sync-claude-to-opencode.ps1 --add personal
+  3. sync-claude-to-opencode.ps1 --switch personal
 "@ | Write-Output
     exit 0
 }
