@@ -54,6 +54,8 @@ curl -fsSL https://raw.githubusercontent.com/lehdqlsl/opencode-claude-auth-sync/
 irm https://raw.githubusercontent.com/lehdqlsl/opencode-claude-auth-sync/main/install.ps1 | iex
 ```
 
+Recent Windows installs register the background sync task through a hidden script runner, so the scheduler should stay silent. If an older install still pops a console window every 15 minutes, reinstall once to refresh the scheduled task.
+
 **Don't want a scheduler?** Install without automatic syncing:
 
 ```bash

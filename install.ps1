@@ -3,6 +3,7 @@ $ErrorActionPreference = "Stop"
 $installDir = Join-Path $HOME ".local\bin"
 $scriptName = "sync-claude-to-opencode.ps1"
 $aliasName = "claude-sync.cmd"
+$hiddenRunnerName = "sync-claude-to-opencode-hidden.vbs"
 $repoRaw = "https://raw.githubusercontent.com/lehdqlsl/opencode-claude-auth-sync/main"
 
 $claudeCreds = Join-Path $HOME ".claude\.credentials.json"
@@ -31,6 +32,14 @@ Invoke-WebRequest -Uri "$repoRaw/$scriptName" -OutFile "$installDir\$scriptName"
 $aliasPath = Join-Path $installDir $aliasName
 $aliasContent = "@echo off`r`nsetlocal`r`npowershell.exe -ExecutionPolicy Bypass -File `"%~dp0$scriptName`" %*`r`n"
 [System.IO.File]::WriteAllText($aliasPath, $aliasContent, $utf8NoBom)
+
+$hiddenRunnerPath = Join-Path $installDir $hiddenRunnerName
+$scriptPathForVbs = (Join-Path $installDir $scriptName).Replace('"', '""')
+$hiddenRunnerContent = @"
+Set shell = CreateObject(""WScript.Shell"")
+shell.Run ""powershell.exe -ExecutionPolicy Bypass -File """"$scriptPathForVbs"""""", 0, False
+"@
+[System.IO.File]::WriteAllText($hiddenRunnerPath, $hiddenRunnerContent, $utf8NoBom)
 
 Write-Output "==> Running initial sync..."
 # Prefer pwsh (PS 7+) over powershell.exe (5.1) for UTF-8 correctness
@@ -62,7 +71,7 @@ if ($noScheduler) {
     if ($existingTask) {
         Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
     }
-    $action = New-ScheduledTaskAction -Execute $psExe -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$installDir\$scriptName`""
+    $action = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "//B //NoLogo `"$hiddenRunnerPath`""
     $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 15)
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
     Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description "Sync Claude CLI credentials to OpenCode" | Out-Null
