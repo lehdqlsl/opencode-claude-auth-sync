@@ -1,14 +1,10 @@
 # opencode-claude-auth-sync
 
-Sync your existing [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) credentials to [OpenCode](https://opencode.ai) — with **cross-platform multi-account support**.
-
-**The only tool that supports multi-account on Linux, macOS, and Windows.** Manage multiple Claude accounts with quota tracking, automatic rotation, and one-command switching — on any platform.
+Sync your existing [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) credentials to [OpenCode](https://opencode.ai) — cross-platform, zero dependencies.
 
 ### Key Features
 
-- **Cross-platform multi-account** — Store and switch between multiple Claude accounts on Linux, macOS, and Windows. Not limited to macOS Keychain.
 - **Quota visibility** — See your 5h / 7d usage at a glance with `claude-sync --status`
-- **Account rotation** — Round-robin switching when one account hits rate limits
 - **Zero dependencies** — Plain shell scripts. No npm, no node_modules, no supply chain risk. Read the source before you run it.
 - **Auto-refresh** — Expired tokens are refreshed via Claude CLI automatically
 
@@ -36,7 +32,7 @@ If it keeps coming back, also remove `opencode-anthropic-auth` from `~/.cache/op
 
 When auth breaks, npm packages pop up fast — but installing unknown packages that handle your OAuth tokens is a risk. This tool is a plain shell script you can read in full before running. No `node_modules`, no dependency tree, no trust required.
 
-npm-based alternatives like [`opencode-claude-auth`](https://github.com/griffinmartin/opencode-claude-auth) work well for single-account setups on macOS. If you need multi-account on Linux or Windows, this is the tool.
+npm-based alternatives like [`opencode-claude-auth`](https://github.com/griffinmartin/opencode-claude-auth) work well too. This tool is for those who prefer auditable shell scripts over npm packages.
 
 </details>
 
@@ -87,155 +83,8 @@ opencode models anthropic  # Should list Claude models (e.g. claude-opus-4-6)
 # Normal sync (default, also runs via scheduler)
 claude-sync
 
-# Check token status without syncing
+# Check token status and usage
 claude-sync --status
-
-# Force refresh token via Claude CLI regardless of expiry
-claude-sync --force
-```
-
-## Multi-Account (Experimental)
-
-Experimental snapshot-based multi-account support for OpenCode.
-
-Important: Claude CLI itself only supports one logged-in account at a time. Multi-account here means this tool stores multiple credential snapshots in its own account store, then switches which one is written into OpenCode's `auth.json`.
-
-This is **not** full independent multi-account refresh. Stored accounts switch cleanly while still valid, but once an account expires you must log into that account again with `claude` and re-save it with `claude-sync --add <label>`.
-
-Account store:
-
-```text
-~/.config/opencode-claude-auth-sync/accounts.json
-```
-
-### Add accounts
-
-Recommended flow: let Claude CLI handle login, then save the current session with `--add`.
-
-#### Option A: login with `claude`, then save with `--add` (recommended)
-
-This is the most reliable path because Claude's login flow can be interactive and may ask you to paste a code back into the terminal.
-
-```bash
-claude
-# complete login in the browser / terminal
-exit
-
-claude-sync --add personal
-```
-
-Add more accounts by repeating the same flow:
-
-```bash
-claude
-# complete login for another account
-exit
-
-claude-sync --add work
-```
-
-Windows:
-
-```powershell
-claude
-# complete login in the browser / terminal
-exit
-
-claude-sync --add personal
-claude-sync --add work
-```
-
-This is also the safest path on SSH / remote machines.
-
-#### Option B: login + save in one command (convenience wrapper)
-
-Use `--login` if you want the script to trigger Claude login and then save the result. This is just a thin wrapper around Claude CLI login, so if the login UX feels awkward, use Option A instead.
-
-```bash
-claude-sync --login personal
-claude-sync --login work
-claude-sync --login backup
-```
-
-Windows:
-
-```powershell
-claude-sync --login personal
-claude-sync --login work
-```
-
-Each `--login` logs out the current Claude session, starts Claude login, then saves the credentials under the given label.
-
-If `--login` feels awkward, use this flow instead:
-
-```bash
-claude
-# run /login inside Claude if needed
-exit
-
-claude-sync --add work
-```
-
-### Manage accounts
-
-```bash
-# List stored accounts
-claude-sync --list
-
-# Show active account status + current 5h / 7d usage
-claude-sync --status
-
-# Switch active account immediately
-claude-sync --switch work
-
-# Rotate to the next account (round-robin)
-claude-sync --rotate
-
-# Remove a stored account
-claude-sync --remove backup
-```
-
-Example `--status` output:
-
-```text
-Account: work (2 total)
-Status:  valid (7h 56m remaining)
-Expires: 2026-03-21T10:55:26.162Z
-Plan:    max
-Usage:   5h 2% (reset: 2026-03-21T07:00:00.152Z)
-         7d 0% (reset: 2026-03-28T02:00:00.153Z)
-         sonnet 3%
-```
-
-### Rotation behavior and limitations
-
-- OpenCode still uses a single Anthropic entry in `auth.json`
-- This tool switches which stored account snapshot is written into that slot
-- `--switch <label>` only works for still-valid stored accounts
-- If a stored account is expired, re-login with `claude` and save it again with `claude-sync --add <label>`
-- If the active account is expired, the script first tries another non-expired stored account
-- If all stored accounts are expired, it falls back to Claude CLI refresh for the currently logged-in Claude account
-- 429 rate limits are not auto-detected yet; if one account is rate-limited, run `claude-sync --rotate` manually
-- `--status` shows the current account's 5h / 7d usage so you can decide when to rotate
-- The same Claude account can still be saved under two different labels if you add it twice
-
-### Store format
-
-```json
-{
-  "accounts": {
-    "personal": {
-      "accessToken": "...",
-      "refreshToken": "...",
-      "expiresAt": 1774027458398,
-      "subscriptionType": "max",
-      "rateLimitTier": "default_claude_max_20x",
-      "addedAt": "2026-03-20T09:55:32.366Z"
-    }
-  },
-  "active": "personal",
-  "rotationIndex": 0
-}
 ```
 
 ## Platform Support
@@ -254,7 +103,7 @@ This tool is **not an npm package** — it's a plain shell script you can read b
 - Single-file scripts: [`sync-claude-to-opencode.sh`](sync-claude-to-opencode.sh) (bash) / [`.ps1`](sync-claude-to-opencode.ps1) (PowerShell)
 - Credentials are passed via stdin, never exposed in process arguments
 - All JSON writes are atomic (temp file + rename) to prevent corruption
-- Review the source before installing: [`sync-claude-to-opencode.sh`](sync-claude-to-opencode.sh) (~846 lines) / [`.ps1`](sync-claude-to-opencode.ps1) (~619 lines)
+- Review the source before installing: [`sync-claude-to-opencode.sh`](sync-claude-to-opencode.sh) (bash) / [`.ps1`](sync-claude-to-opencode.ps1) (PowerShell)
 
 ```bash
 # Inspect before running
