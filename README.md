@@ -91,9 +91,11 @@ claude-sync --status
 
 | Platform | Claude credentials | Scheduler | Install command |
 |---|---|---|---|
-| **Linux / WSL** | `~/.claude/.credentials.json` | cron | `curl \| bash` |
+| **Linux / WSL** | `~/.claude/.credentials.json` | systemd user timer *(cron fallback)* | `curl \| bash` |
 | **macOS** | macOS Keychain → file fallback | LaunchAgent | `curl \| bash` |
 | **Windows** (native) | `%USERPROFILE%\.claude\.credentials.json` | Task Scheduler | PowerShell |
+
+On Linux, the installer prefers a **systemd user timer** with `Persistent=true`, so it catches up missed runs after suspend/resume and reboot — the same feature parity the macOS LaunchAgent already provides. Systems without user systemd fall back to cron (`*/15` + `@reboot`). Plain cron does not run during suspend, so laptops should prefer the systemd path.
 
 ## Security
 
@@ -185,7 +187,10 @@ claude-sync
 # macOS — LaunchAgent (recommended, catches up after sleep)
 # Use the install script: curl ... | bash
 
-# Linux — cron
+# Linux — systemd user timer (recommended, catches up after sleep/reboot)
+# Use the install script: curl ... | bash
+
+# Linux — cron fallback (does not run during suspend)
 (crontab -l 2>/dev/null; echo "*/15 * * * * \$HOME/.local/bin/sync-claude-to-opencode.sh >> \$HOME/.local/share/opencode/sync-claude.log 2>&1") | crontab -
 ```
 

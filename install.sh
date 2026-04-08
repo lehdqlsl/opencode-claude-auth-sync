@@ -6,6 +6,8 @@ SCRIPT_NAME="sync-claude-to-opencode.sh"
 ALIAS_NAME="claude-sync"
 REPO_RAW="https://raw.githubusercontent.com/lehdqlsl/opencode-claude-auth-sync/main"
 CRON_MARKER="# opencode-claude-auth-sync"
+SYSTEMD_SERVICE_NAME="opencode-claude-sync.service"
+SYSTEMD_TIMER_NAME="opencode-claude-sync.timer"
 
 CLAUDE_CREDS="${HOME}/.claude/.credentials.json"
 OPENCODE_AUTH="${HOME}/.local/share/opencode/auth.json"
@@ -139,21 +141,79 @@ PLIST
   echo "    Runs every 15 minutes + on login + catches up after sleep."
 
 else
-  echo "==> Setting up cron (every 15 minutes)..."
-  CRON_CMD="*/15 * * * * PATH=\"${SYNC_PATH}\" ${INSTALL_DIR}/${SCRIPT_NAME} >> ${HOME}/.local/share/opencode/sync-claude.log 2>&1 ${CRON_MARKER}"
+  # systemd user timer is the Linux equivalent of the macOS LaunchAgent above:
+  # Persistent=true catches up missed runs after sleep/resume and reboot.
+  # Cron is the fallback for systems without user systemd.
+  if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
+    echo "==> Setting up systemd user timer (every 15 minutes, catches up after sleep/reboot)..."
+    SYSTEMD_USER_DIR="${HOME}/.config/systemd/user"
+    LOG_PATH="${HOME}/.local/share/opencode/sync-claude.log"
 
-  if command -v crontab >/dev/null 2>&1; then
+    mkdir -p "$SYSTEMD_USER_DIR"
+    mkdir -p "$(dirname "$LOG_PATH")"
+
+    cat > "${SYSTEMD_USER_DIR}/${SYSTEMD_SERVICE_NAME}" <<SERVICE
+[Unit]
+Description=Sync Claude credentials to OpenCode
+Documentation=https://github.com/lehdqlsl/opencode-claude-auth-sync
+
+[Service]
+Type=oneshot
+Environment=PATH=${SYNC_PATH}
+ExecStart=/bin/sh -c 'exec "${INSTALL_DIR}/${SCRIPT_NAME}" >> "${LOG_PATH}" 2>&1'
+SERVICE
+
+    cat > "${SYSTEMD_USER_DIR}/${SYSTEMD_TIMER_NAME}" <<TIMER
+[Unit]
+Description=Periodic Claude -> OpenCode credential sync
+Documentation=https://github.com/lehdqlsl/opencode-claude-auth-sync
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=15min
+Persistent=true
+Unit=${SYSTEMD_SERVICE_NAME}
+
+[Install]
+WantedBy=timers.target
+TIMER
+
+    systemctl --user daemon-reload
+    systemctl --user enable --now "$SYSTEMD_TIMER_NAME" >/dev/null
+
+    if command -v crontab >/dev/null 2>&1; then
+      EXISTING=$(crontab -l 2>/dev/null || true)
+      if echo "$EXISTING" | grep -qF "$CRON_MARKER"; then
+        FILTERED=$(echo "$EXISTING" | grep -vF "$CRON_MARKER" || true)
+        if [[ -z "$FILTERED" ]]; then
+          crontab -r 2>/dev/null || true
+        else
+          echo "$FILTERED" | crontab -
+        fi
+        echo "    Migrated legacy cron entry to systemd timer."
+      fi
+    fi
+
+    echo "    Timer registered: $SYSTEMD_TIMER_NAME"
+    echo "    Runs every 15 minutes + at boot + catches up after sleep/reboot (Persistent=true)."
+
+  elif command -v crontab >/dev/null 2>&1; then
+    echo "==> Setting up cron (every 15 minutes + @reboot)..."
+    echo "    NOTE: cron does not run while the system is suspended. On laptops, prefer systemd --user."
+    CRON_PERIODIC="*/15 * * * * PATH=\"${SYNC_PATH}\" ${INSTALL_DIR}/${SCRIPT_NAME} >> ${HOME}/.local/share/opencode/sync-claude.log 2>&1 ${CRON_MARKER}"
+    CRON_BOOT="@reboot sleep 30 && PATH=\"${SYNC_PATH}\" ${INSTALL_DIR}/${SCRIPT_NAME} >> ${HOME}/.local/share/opencode/sync-claude.log 2>&1 ${CRON_MARKER}"
+
     EXISTING=$(crontab -l 2>/dev/null || true)
     FILTERED=$(echo "$EXISTING" | grep -vF "$CRON_MARKER" || true)
     if [[ -z "$FILTERED" ]]; then
-      echo "$CRON_CMD" | crontab -
+      printf '%s\n%s\n' "$CRON_PERIODIC" "$CRON_BOOT" | crontab -
     else
-      echo "$FILTERED
-$CRON_CMD" | crontab -
+      printf '%s\n%s\n%s\n' "$FILTERED" "$CRON_PERIODIC" "$CRON_BOOT" | crontab -
     fi
-    echo "    Cron registered."
+    echo "    Cron registered (periodic every 15 min + @reboot catch-up)."
+
   else
-    echo "    WARNING: crontab not found. Set up a periodic job manually:"
+    echo "    WARNING: neither systemd --user nor crontab available. Set up a periodic job manually:"
     echo "      ${INSTALL_DIR}/${SCRIPT_NAME}"
   fi
 fi
