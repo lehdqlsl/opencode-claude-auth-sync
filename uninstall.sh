@@ -6,6 +6,9 @@ SCRIPT_NAME="sync-claude-to-opencode.sh"
 CRON_MARKER="# opencode-claude-auth-sync"
 PLIST_NAME="com.opencode.claude-sync"
 PLIST_PATH="${HOME}/Library/LaunchAgents/${PLIST_NAME}.plist"
+SYSTEMD_USER_DIR="${HOME}/.config/systemd/user"
+SYSTEMD_SERVICE_NAME="opencode-claude-sync.service"
+SYSTEMD_TIMER_NAME="opencode-claude-sync.timer"
 
 if [[ "$(uname)" == "Darwin" ]]; then
   echo "==> Removing LaunchAgent..."
@@ -17,6 +20,16 @@ if [[ "$(uname)" == "Darwin" ]]; then
     echo "    No LaunchAgent found. Skipping."
   fi
 else
+  if command -v systemctl >/dev/null 2>&1 \
+    && systemctl --user show-environment >/dev/null 2>&1 \
+    && [[ -f "${SYSTEMD_USER_DIR}/${SYSTEMD_TIMER_NAME}" || -f "${SYSTEMD_USER_DIR}/${SYSTEMD_SERVICE_NAME}" ]]; then
+    echo "==> Removing systemd user timer..."
+    systemctl --user disable --now "$SYSTEMD_TIMER_NAME" >/dev/null 2>&1 || true
+    rm -f "${SYSTEMD_USER_DIR}/${SYSTEMD_TIMER_NAME}" "${SYSTEMD_USER_DIR}/${SYSTEMD_SERVICE_NAME}"
+    systemctl --user daemon-reload 2>/dev/null || true
+    echo "    Timer removed."
+  fi
+
   echo "==> Removing cron job..."
   if command -v crontab >/dev/null 2>&1; then
     EXISTING=$(crontab -l 2>/dev/null || true)
